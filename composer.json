@@ -1,8 +1,11 @@
 {
     "autoload": {
         "psr-4": {
-            "App": "app/"
+            "App\\": "app/"
         }
     },
-    "require": {}
+    "require": {
+        "guzzlehttp/guzzle": "*",
+        "nesbot/carbon": "^2.71"
+    }
 }
