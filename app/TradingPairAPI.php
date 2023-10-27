@@ -5,36 +5,74 @@ declare(strict_types=1);
 namespace App;
 
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
 
 class TradingPairAPI
 {
-    private Client $client;
-    private const API_URL = "https://api4.binance.com/api/v3/ticker/24hr";
+    private string $apiUrl;
+    private Client $http;
 
-    public function __construct()
+    public function __construct(string $apiUrl)
     {
-        $this->client = new Client();
+        $this->apiUrl = $apiUrl;
+        $this->http = new Client();
     }
 
-    public function fetchData(TradingPair $pairSymbol): void
-    {
-        $url = self::API_URL . "?symbol={$pairSymbol->getSymbolPair()}";
-
-        $response = $this->client->get($url);
-        $data = json_decode($response->getBody()->getContents(), true);
-
-        $pairSymbol->setData($data);
-    }
-
-    public function fetchTradingPairsData(array $symbols): TradingPairCollection
+    public function getTradingPairsData(array $symbols): ?TradingPairCollection
     {
         $collection = new TradingPairCollection();
 
         foreach ($symbols as $symbol) {
-            $pair = new TradingPair($symbol);
-            $this->fetchData($pair);
-            $collection->add($pair);
+            $url = $this->apiUrl . "?symbol={$symbol}BTC";
+
+            try {
+                $response = $this->http->get($url);
+
+                if ($response->getStatusCode() !== 200) {
+                    throw new \RuntimeException("Received an unexpected HTTP status code for symbol $symbol: " . $response->getStatusCode());
+                }
+
+                $data = json_decode($response->getBody()->getContents(), true);
+
+                if ($data === null) {
+                    throw new \RuntimeException("Error decoding JSON response for symbol $symbol");
+                }
+
+                foreach ($data as $pairData) {
+                    $pair = new TradingPair(
+                        $pairData['symbol'],
+                        $pairData['priceChange'],
+                        $pairData['priceChangePercent'],
+                        $pairData['weightedAvgPrice'],
+                        $pairData['prevClosePrice'],
+                        $pairData['lastPrice'],
+                        $pairData['lastQty'],
+                        $pairData['bidPrice'],
+                        $pairData['bidQty'],
+                        $pairData['askPrice'],
+                        $pairData['askQty'],
+                        $pairData['openPrice'],
+                        $pairData['highPrice'],
+                        $pairData['lowPrice'],
+                        $pairData['volume'],
+                        $pairData['quoteVolume'],
+                        (int)$pairData['openTime'],
+                        (int)$pairData['closeTime'],
+                        (int)$pairData['firstId'],
+                        (int)$pairData['lastId'],
+                        (int)$pairData['count']
+                    );
+                    $collection->add($pair);
+                }
+            } catch (GuzzleException $e) {
+                echo "GuzzleException: " . $e->getMessage() . "\n";
+                return null;
+            } catch (\RuntimeException $e) {
+                echo "RuntimeException: " . $e->getMessage() . "\n";
+                return null;
+            }
         }
+
         return $collection;
     }
 }

@@ -11,7 +11,7 @@ class TradingPairCollection
     public function __construct(array $tradingPairs = [])
     {
         foreach ($tradingPairs as $tradingPair)
-            $this->add(new TradingPair($tradingPair));
+            $this->add($tradingPair);
     }
 
     public function add(TradingPair $tradingPair): void
